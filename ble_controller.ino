@@ -11,7 +11,6 @@
 SPIClass touchSPI = SPIClass(VSPI);
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 
-// Calibration Tactile CYD
 #define TOUCH_X_MIN  200
 #define TOUCH_X_MAX  3800
 #define TOUCH_Y_MIN  200
@@ -34,14 +33,15 @@ enum ActionType { ACT_KEY, ACT_COMBO, ACT_TEXT, ACT_CONSUMER };
 struct Button {
   const char* label;
   ActionType  action;
-  uint8_t     k1, k2, k3;
+  uint16_t    k1, k2, k3; // Changé en uint16_t pour supporter les codes étendus
   const char* text;
   uint16_t    color;
 };
 
-// --- Grille de boutons optimisée pour Android ---
+// --- Grille de boutons ---
+// Note: On force le cast (uint16_t) pour les touches Media afin d'éviter l'erreur de conversion
 Button buttons[ROWS][COLS] = {
-  {{"Vol -", ACT_CONSUMER, KEY_MEDIA_VOLUME_DOWN, 0, 0, NULL, 0x3186}, {"Vol +", ACT_CONSUMER, KEY_MEDIA_VOLUME_UP, 0, 0, NULL, 0x3186}, {"Mute", ACT_CONSUMER, KEY_MEDIA_MUTE, 0, 0, NULL, 0x3186}},
+  {{"Vol -", ACT_CONSUMER, (uint16_t)KEY_MEDIA_VOLUME_DOWN, 0, 0, NULL, 0x3186}, {"Vol +", ACT_CONSUMER, (uint16_t)KEY_MEDIA_VOLUME_UP, 0, 0, NULL, 0x3186}, {"Mute", ACT_CONSUMER, (uint16_t)KEY_MEDIA_MUTE, 0, 0, NULL, 0x3186}},
   {{"Home", ACT_KEY, KEY_HOME, 0, 0, NULL, 0x0343}, {"Back", ACT_KEY, KEY_ESC, 0, 0, NULL, 0x0343}, {"Apps", ACT_COMBO, KEY_LEFT_ALT, KEY_TAB, 0, NULL, 0x0343}},
   {{"Copier", ACT_COMBO, KEY_LEFT_CTRL, 'c', 0, NULL, 0x8800}, {"Coller", ACT_COMBO, KEY_LEFT_CTRL, 'v', 0, NULL, 0x8800}, {"Tout", ACT_COMBO, KEY_LEFT_CTRL, 'a', 0, NULL, 0x8800}},
   {{"Search", ACT_KEY, KEY_F3, 0, 0, NULL, 0x4208}, {"Notifs", ACT_COMBO, KEY_LEFT_ALT, KEY_F1, 0, NULL, 0x4208}, {"Params", ACT_COMBO, KEY_LEFT_CTRL, KEY_F1, 0, NULL, 0x4208}},
@@ -88,12 +88,12 @@ void executeButton(int row, int col) {
 
   switch (b.action) {
     case ACT_KEY:
-      bleKeyboard.write(b.k1);
+      bleKeyboard.write((uint8_t)b.k1);
       break;
     case ACT_COMBO:
-      bleKeyboard.press(b.k1);
-      if (b.k2) bleKeyboard.press(b.k2);
-      if (b.k3) bleKeyboard.press(b.k3);
+      bleKeyboard.press((uint8_t)b.k1);
+      if (b.k2) bleKeyboard.press((uint8_t)b.k2);
+      if (b.k3) bleKeyboard.press((uint8_t)b.k3);
       delay(50);
       bleKeyboard.releaseAll();
       break;
@@ -101,8 +101,9 @@ void executeButton(int row, int col) {
       bleKeyboard.print(b.text);
       break;
     case ACT_CONSUMER:
-      // Syntaxe correcte pour les touches Media Android
-      bleKeyboard.write(MediaKeyReport{b.k1, 0});
+      // On reconstruit le code média à partir du uint16_t
+      const uint8_t mediaKey[2] = {(uint8_t)b.k1, (uint8_t)(b.k1 >> 8)};
+      bleKeyboard.write(mediaKey);
       break;
   }
 }
