@@ -38,8 +38,7 @@ struct Button {
   uint16_t    color;
 };
 
-// --- Grille de boutons ---
-// Pour ACT_CONSUMER, on passe une valeur arbitraire (1, 2, 3) que l'on traitera dans le switch
+// Grille de boutons (Indexés pour ACT_CONSUMER)
 Button buttons[ROWS][COLS] = {
   {{"Vol -", ACT_CONSUMER, 1, 0, 0, NULL, 0x3186}, {"Vol +", ACT_CONSUMER, 2, 0, 0, NULL, 0x3186}, {"Mute", ACT_CONSUMER, 3, 0, 0, NULL, 0x3186}},
   {{"Home", ACT_KEY, KEY_HOME, 0, 0, NULL, 0x0343}, {"Back", ACT_KEY, KEY_ESC, 0, 0, NULL, 0x0343}, {"Apps", ACT_COMBO, KEY_LEFT_ALT, KEY_TAB, 0, NULL, 0x0343}},
@@ -71,13 +70,10 @@ void drawButton(int row, int col, bool pressed) {
   int x = GRID_X + col * (BTN_W + BTN_GAP);
   int y = GRID_Y + row * (BTN_H + BTN_GAP);
   Button& b = buttons[row][col];
-  
   uint16_t bg = pressed ? TFT_WHITE : b.color;
   uint16_t fg = pressed ? TFT_BLACK : TFT_WHITE;
-  
   tft.fillRoundRect(x, y, BTN_W, BTN_H, 4, bg);
   tft.setTextColor(fg);
-  tft.setTextSize(1);
   tft.setTextDatum(MC_DATUM);
   tft.drawString(b.label, x + (BTN_W/2), y + (BTN_H/2));
 }
@@ -101,15 +97,16 @@ void executeButton(int row, int col) {
       bleKeyboard.print(b.text);
       break;
     case ACT_CONSUMER:
-      // On utilise les constantes directement ici pour éviter les erreurs de cast
       if (b.k1 == 1) bleKeyboard.write(KEY_MEDIA_VOLUME_DOWN);
       else if (b.k1 == 2) bleKeyboard.write(KEY_MEDIA_VOLUME_UP);
       else if (b.k1 == 3) bleKeyboard.write(KEY_MEDIA_MUTE);
       break;
   }
+  Serial.printf("Action: %s\n", b.label);
 }
 
 void setup() {
+  Serial.begin(115200);
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
 
@@ -132,8 +129,9 @@ void loop() {
     drawStatusBar();
   }
 
-  if (touch.tirqTouched() && touch.touched()) {
+  if (touch.touched()) {
     TS_Point p = touch.getPoint();
+    // Inversion des axes map selon la rotation du CYD
     int sx = map(p.x, TOUCH_X_MIN, TOUCH_X_MAX, 0, 320);
     int sy = map(p.y, TOUCH_Y_MIN, TOUCH_Y_MAX, 0, 240);
 
@@ -155,5 +153,4 @@ void loop() {
     drawButton(pressedRow, pressedCol, false);
     pressedRow = -1; pressedCol = -1;
   }
-  delay(10);
 }
