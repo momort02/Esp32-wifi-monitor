@@ -1,9 +1,3 @@
-/*
- * ================================================
- * BLE Controller - CYD ESP32 (ESP32-2432S028)
- * ================================================
- */
-
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <XPT2046_Touchscreen.h>
@@ -14,11 +8,10 @@
 #define TOUCH_IRQ 36
 #define TFT_BL    21
 
-// Utilisation d'une instance SPI dédiée pour le tactile (Bus partagé)
 SPIClass touchSPI = SPIClass(VSPI);
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 
-// Calibration Tactile
+// Calibration Tactile CYD
 #define TOUCH_X_MIN  200
 #define TOUCH_X_MAX  3800
 #define TOUCH_Y_MIN  200
@@ -46,21 +39,19 @@ struct Button {
   uint16_t    color;
 };
 
-// --- Définition de la Grille ---
+// --- Grille de boutons optimisée pour Android ---
 Button buttons[ROWS][COLS] = {
   {{"Vol -", ACT_CONSUMER, KEY_MEDIA_VOLUME_DOWN, 0, 0, NULL, 0x3186}, {"Vol +", ACT_CONSUMER, KEY_MEDIA_VOLUME_UP, 0, 0, NULL, 0x3186}, {"Mute", ACT_CONSUMER, KEY_MEDIA_MUTE, 0, 0, NULL, 0x3186}},
-  {{"Home", ACT_KEY, KEY_HOME, 0, 0, NULL, 0x0343}, {"Back", ACT_KEY, KEY_ESCAPE, 0, 0, NULL, 0x0343}, {"Tab", ACT_COMBO, KEY_LEFT_ALT, KEY_TAB, 0, NULL, 0x0343}},
+  {{"Home", ACT_KEY, KEY_HOME, 0, 0, NULL, 0x0343}, {"Back", ACT_KEY, KEY_ESC, 0, 0, NULL, 0x0343}, {"Apps", ACT_COMBO, KEY_LEFT_ALT, KEY_TAB, 0, NULL, 0x0343}},
   {{"Copier", ACT_COMBO, KEY_LEFT_CTRL, 'c', 0, NULL, 0x8800}, {"Coller", ACT_COMBO, KEY_LEFT_CTRL, 'v', 0, NULL, 0x8800}, {"Tout", ACT_COMBO, KEY_LEFT_CTRL, 'a', 0, NULL, 0x8800}},
-  {{"Chercher", ACT_KEY, KEY_F3, 0, 0, NULL, 0x4208}, {"Notifs", ACT_COMBO, KEY_LEFT_ALT, KEY_F1, 0, NULL, 0x4208}, {"Params", ACT_COMBO, KEY_LEFT_CTRL, KEY_F1, 0, NULL, 0x4208}},
+  {{"Search", ACT_KEY, KEY_F3, 0, 0, NULL, 0x4208}, {"Notifs", ACT_COMBO, KEY_LEFT_ALT, KEY_F1, 0, NULL, 0x4208}, {"Params", ACT_COMBO, KEY_LEFT_CTRL, KEY_F1, 0, NULL, 0x4208}},
   {{"OK", ACT_TEXT, 0, 0, 0, "OK", 0x2208}, {"OTW", ACT_TEXT, 0, 0, 0, "On the way!", 0x2208}, {"Enter", ACT_KEY, KEY_RETURN, 0, 0, NULL, 0x0228}}
 };
 
-// --- État ---
 bool lastConnected = false;
 int pressedRow = -1, pressedCol = -1;
 unsigned long pressTime = 0;
 
-// --- Fonctions d'Affichage ---
 void drawStatusBar() {
   tft.fillRect(0, 0, 320, 32, TFT_BLACK);
   tft.drawLine(0, 32, 320, 32, 0x7BEF);
@@ -69,10 +60,10 @@ void drawStatusBar() {
   
   if (bleKeyboard.isConnected()) {
     tft.setTextColor(TFT_GREEN);
-    tft.print("BLE: CONNECTE");
+    tft.print("ANDROID: OK");
   } else {
     tft.setTextColor(TFT_YELLOW);
-    tft.print("BLE: EN ATTENTE...");
+    tft.print("BLE: ATTENTE...");
   }
 }
 
@@ -110,14 +101,13 @@ void executeButton(int row, int col) {
       bleKeyboard.print(b.text);
       break;
     case ACT_CONSUMER:
-      bleKeyboard.write(KEY_MEDIA_VOLUME_UP); // Exemple simplifié
+      // Syntaxe correcte pour les touches Media Android
+      bleKeyboard.write(MediaKeyReport{b.k1, 0});
       break;
   }
 }
 
 void setup() {
-  Serial.begin(115200);
-  
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
 
