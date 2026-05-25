@@ -1,0 +1,66 @@
+name: Compile ESP32 Sketch
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # permet de lancer manuellement
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls \
+            https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "TFT_eSPI"
+          arduino-cli lib install "XPT2046_Touchscreen"
+          arduino-cli lib install "ArduinoJson"
+
+      - name: Configure TFT_eSPI for CYD
+        run: |
+          cat > ~/.arduino15/libraries/TFT_eSPI/User_Setup.h << 'EOF'
+          #define ILI9341_DRIVER
+          #define TFT_MOSI 13
+          #define TFT_SCLK 14
+          #define TFT_CS   15
+          #define TFT_DC    2
+          #define TFT_RST  -1
+          #define TFT_BL   21
+          #define TOUCH_CS  33
+          #define SPI_FREQUENCY        40000000
+          #define SPI_TOUCH_FREQUENCY   2500000
+          EOF
+
+      - name: Compile sketch
+        run: |
+          # Trouve le fichier .ino
+          SKETCH=$(find . -name "*.ino" | head -1)
+          SKETCH_DIR=$(dirname "$SKETCH")
+          echo "Compiling: $SKETCH"
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32 \
+            --output-dir ./output \
+            "$SKETCH_DIR"
+
+      - name: Upload BIN as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-esp32
+          path: |
+            output/*.bin
+            output/*.elf
+          retention-days: 30
