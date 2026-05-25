@@ -58,10 +58,25 @@ jobs:
           #define SPI_TOUCH_FREQUENCY   2500000
           EOF
 
-      - name: Compile
+      - name: Prepare and Compile
         run: |
-          SKETCH_PATH=$(find . -name "*.ino" -print -quit)
-          arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./output "$SKETCH_PATH"
+          # 1. Trouver le fichier .ino
+          FULL_PATH=$(find . -name "*.ino" -print -quit)
+          SKETCH_NAME=$(basename "$FULL_PATH" .ino)
+          echo "Compiling sketch: $SKETCH_NAME"
+
+          # 2. Créer un dossier temporaire propre portant le nom du sketch
+          # Cela évite l'erreur "main file missing from sketch"
+          mkdir -p "build/$SKETCH_NAME"
+          cp "$FULL_PATH" "build/$SKETCH_NAME/"
+          
+          # Copier aussi les éventuels fichiers .h ou .cpp s'ils existent
+          cp $(dirname "$FULL_PATH")/*.h "build/$SKETCH_NAME/" 2>/dev/null || true
+          cp $(dirname "$FULL_PATH")/*.cpp "build/$SKETCH_NAME/" 2>/dev/null || true
+
+          # 3. Compiler depuis ce nouveau dossier
+          arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./output "build/$SKETCH_NAME"
+
 
       - name: Upload BIN
         uses: actions/upload-artifact@v4
