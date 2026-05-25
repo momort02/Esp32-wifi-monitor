@@ -25,9 +25,13 @@ jobs:
 
       - name: Install libraries
         run: |
+          # 1. Installation des bibliothèques standards
           arduino-cli lib install "TFT_eSPI"
           arduino-cli lib install "XPT2046_Touchscreen"
           arduino-cli lib install "ArduinoJson"
+          
+          # 2. Activation de l'installation ZIP et installation de BLE Keyboard
+          arduino-cli config set library.enable_unsafe_install true
           curl -L https://github.com/T-vK/ESP32-BLE-Keyboard/archive/refs/heads/master.zip -o /tmp/blekey.zip
           arduino-cli lib install --zip-path /tmp/blekey.zip
 
