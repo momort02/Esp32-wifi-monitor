@@ -15,7 +15,7 @@
 
 #define AP_SSID      "CYD-Config"
 #define AP_PASSWORD  "12345678"
-#define SPEED_TEST_URL "http://speedtest.tele2.net/512KB.zip"
+#define SPEED_TEST_URL "http://ipv4.download.thinkbroadband.com/512KB.zip"
 #define PING_HOST      "8.8.8.8"
 #define MEASURE_INTERVAL 30000
 
@@ -82,7 +82,7 @@ int measurePing() {
 float measureDownload() {
   HTTPClient http;
   http.begin(SPEED_TEST_URL);
-  http.setTimeout(15000);
+  http.setTimeout(8000);
   int code = http.GET();
   if (code != HTTP_CODE_OK) { http.end(); return -1; }
   int total = http.getSize();
@@ -93,7 +93,7 @@ float measureDownload() {
   while (http.connected() && received < total) {
     int av = stream->available();
     if (av > 0) received += stream->readBytes(buf, min(av, (int)sizeof(buf)));
-    if (millis() - t > 12000) break;
+    if (millis() - t > 6000) break;
   }
   float elapsed = (millis() - t) / 1000.0;
   http.end();
