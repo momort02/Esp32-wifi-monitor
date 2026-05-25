@@ -34,14 +34,24 @@ jobs:
           curl -L https://github.com/T-vK/ESP32-BLE-Keyboard/archive/refs/heads/master.zip -o /tmp/blekey.zip
           arduino-cli lib install --zip-path /tmp/blekey.zip
 
-          # --- HACK DE COMPATIBILITÉ CORE ESP32 3.0 ---
-          # On transforme les std::string en String (Arduino) pour BleKeyboard.cpp et .h
+          # --- HACK DE COMPATIBILITÉ CORE ESP32 3.0 (V2) ---
           LIB_DIR="$HOME/Arduino/libraries/ESP32_BLE_Keyboard"
+          
+          # 1. Remplacer std::string par String
           sed -i 's/std::string/String/g' "$LIB_DIR/BleKeyboard.h"
           sed -i 's/std::string/String/g' "$LIB_DIR/BleKeyboard.cpp"
-          # On corrige un appel spécifique à .c_str() qui devient inutile avec String
+          
+          # 2. Remplacer substr par substring (spécifique à l'objet String Arduino)
+          sed -i 's/\.substr(/.substring(/g' "$LIB_DIR/BleKeyboard.cpp"
+          
+          # 3. Supprimer les appels .c_str() devenus inutiles ou problématiques
           sed -i 's/deviceName.c_str()/deviceName/g' "$LIB_DIR/BleKeyboard.cpp"
           sed -i 's/deviceManufacturer.c_str()/deviceManufacturer/g' "$LIB_DIR/BleKeyboard.cpp"
+          
+          # 4. Nettoyer les conversions String(String(...)) créées par les versions précédentes
+          sed -i 's/String(deviceName)/deviceName/g' "$LIB_DIR/BleKeyboard.cpp"
+          sed -i 's/String(deviceManufacturer)/deviceManufacturer/g' "$LIB_DIR/BleKeyboard.cpp"
+
 
 
       - name: Configure TFT_eSPI for CYD
