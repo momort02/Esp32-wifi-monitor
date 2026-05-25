@@ -44,12 +44,14 @@ jobs:
           echo "#define SPI_FREQUENCY        40000000" >> "$SETUP_FILE"
           echo "#define SPI_TOUCH_FREQUENCY   2500000" >> "$SETUP_FILE"
 
-      - name: Compile sketch
+      - name: Prepare and compile sketch
         run: |
           SKETCH=$(find . -name "*.ino" | head -1)
-          SKETCH_DIR=$(dirname "$SKETCH")
-          echo "Compiling: $SKETCH"
-          arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./output "$SKETCH_DIR"
+          SKETCH_NAME=$(basename "$SKETCH" .ino)
+          echo "Sketch: $SKETCH_NAME"
+          mkdir -p ./build_sketch/$SKETCH_NAME
+          cp "$SKETCH" ./build_sketch/$SKETCH_NAME/
+          arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./output ./build_sketch/$SKETCH_NAME
 
       - name: Upload BIN as artifact
         uses: actions/upload-artifact@v4
