@@ -25,15 +25,24 @@ jobs:
 
       - name: Install libraries
         run: |
-          # 1. Installation des bibliothèques standards
           arduino-cli lib install "TFT_eSPI"
           arduino-cli lib install "XPT2046_Touchscreen"
           arduino-cli lib install "ArduinoJson"
           
-          # 2. Activation de l'installation ZIP et installation de BLE Keyboard
+          # Autoriser l'installation ZIP
           arduino-cli config set library.enable_unsafe_install true
           curl -L https://github.com/T-vK/ESP32-BLE-Keyboard/archive/refs/heads/master.zip -o /tmp/blekey.zip
           arduino-cli lib install --zip-path /tmp/blekey.zip
+
+          # --- HACK DE COMPATIBILITÉ CORE ESP32 3.0 ---
+          # On transforme les std::string en String (Arduino) pour BleKeyboard.cpp et .h
+          LIB_DIR="$HOME/Arduino/libraries/ESP32_BLE_Keyboard"
+          sed -i 's/std::string/String/g' "$LIB_DIR/BleKeyboard.h"
+          sed -i 's/std::string/String/g' "$LIB_DIR/BleKeyboard.cpp"
+          # On corrige un appel spécifique à .c_str() qui devient inutile avec String
+          sed -i 's/deviceName.c_str()/deviceName/g' "$LIB_DIR/BleKeyboard.cpp"
+          sed -i 's/deviceManufacturer.c_str()/deviceManufacturer/g' "$LIB_DIR/BleKeyboard.cpp"
+
 
       - name: Configure TFT_eSPI for CYD
         run: |
