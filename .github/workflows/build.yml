@@ -19,8 +19,7 @@ jobs:
       - name: Install ESP32 core
         run: |
           arduino-cli config init
-          arduino-cli config add board_manager.additional_urls \
-            https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
@@ -34,28 +33,23 @@ jobs:
         run: |
           SETUP_FILE=$(find ~ -path "*/TFT_eSPI/User_Setup.h" | head -1)
           echo "Found: $SETUP_FILE"
-          cat > "$SETUP_FILE" << 'SETUPEOF'
-#define ILI9341_DRIVER
-#define TFT_MOSI 13
-#define TFT_SCLK 14
-#define TFT_CS   15
-#define TFT_DC    2
-#define TFT_RST  -1
-#define TFT_BL   21
-#define TOUCH_CS  33
-#define SPI_FREQUENCY        40000000
-#define SPI_TOUCH_FREQUENCY   2500000
-SETUPEOF
+          echo "#define ILI9341_DRIVER" > "$SETUP_FILE"
+          echo "#define TFT_MOSI 13" >> "$SETUP_FILE"
+          echo "#define TFT_SCLK 14" >> "$SETUP_FILE"
+          echo "#define TFT_CS   15" >> "$SETUP_FILE"
+          echo "#define TFT_DC    2" >> "$SETUP_FILE"
+          echo "#define TFT_RST  -1" >> "$SETUP_FILE"
+          echo "#define TFT_BL   21" >> "$SETUP_FILE"
+          echo "#define TOUCH_CS  33" >> "$SETUP_FILE"
+          echo "#define SPI_FREQUENCY        40000000" >> "$SETUP_FILE"
+          echo "#define SPI_TOUCH_FREQUENCY   2500000" >> "$SETUP_FILE"
 
       - name: Compile sketch
         run: |
           SKETCH=$(find . -name "*.ino" | head -1)
           SKETCH_DIR=$(dirname "$SKETCH")
           echo "Compiling: $SKETCH"
-          arduino-cli compile \
-            --fqbn esp32:esp32:esp32 \
-            --output-dir ./output \
-            "$SKETCH_DIR"
+          arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./output "$SKETCH_DIR"
 
       - name: Upload BIN as artifact
         uses: actions/upload-artifact@v4
