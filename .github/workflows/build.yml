@@ -28,7 +28,8 @@ jobs:
           arduino-cli lib install "TFT_eSPI"
           arduino-cli lib install "XPT2046_Touchscreen"
           arduino-cli lib install "ArduinoJson"
-          arduino-cli lib install "ESP32 BLE Keyboard"
+          curl -L https://github.com/T-vK/ESP32-BLE-Keyboard/archive/refs/heads/master.zip -o $TMPDIR/blekey.zip
+          arduino-cli lib install --zip-path $TMPDIR/blekey.zip
 
       - name: Configure TFT_eSPI for CYD
         run: |
