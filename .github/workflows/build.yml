@@ -28,11 +28,11 @@ jobs:
       - name: Install TFT_eSPI library
         run: arduino-cli lib install "TFT_eSPI"
 
-      - name: Install ESP32-audioI2S v2.0.0 (compatible IDF4 + DAC interne)
+      - name: Install ESP32-audioI2S (commit compatible IDF4 + DAC interne)
         run: |
           git clone https://github.com/schreibfaul1/ESP32-audioI2S.git ~/Arduino/libraries/ESP32-audioI2S
           cd ~/Arduino/libraries/ESP32-audioI2S
-          git checkout v2.0.0
+          git checkout 9ed92d01dd1063d37f62c65f5f90d4e285f16d6f
 
       - name: Patch C++ standard to gnu++17
         run: |
