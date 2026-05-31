@@ -21,53 +21,50 @@ jobs:
       - name: Install ESP32 board package v2.0.17
         run: |
           arduino-cli config init
-          arduino-cli config add board_manager.additional_urls \
-            https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
           arduino-cli core update-index
           arduino-cli core install esp32:esp32@2.0.17
 
       - name: Install TFT_eSPI library
         run: arduino-cli lib install "TFT_eSPI"
 
-      - name: Install ESP32-audioI2S (last version without C++20)
+      - name: Install ESP32-audioI2S (pinned before C++20)
         run: |
-          git clone https://github.com/schreibfaul1/ESP32-audioI2S.git \
-            ~/Arduino/libraries/ESP32-audioI2S
+          git clone https://github.com/schreibfaul1/ESP32-audioI2S.git ~/Arduino/libraries/ESP32-audioI2S
           cd ~/Arduino/libraries/ESP32-audioI2S
           git checkout a9e81f3
 
-      - name: Patch C++ standard to C++17 in ESP32 board package
+      - name: Patch C++ standard to gnu++17
         run: |
           PLATFORM_TXT=$(find ~/.arduino15/packages/esp32 -name "platform.txt" | head -1)
-          echo "Patching: $PLATFORM_TXT"
           sed -i 's/-std=gnu++11/-std=gnu++17/g' "$PLATFORM_TXT"
 
       - name: Write CYD User_Setup.h into TFT_eSPI
         run: |
-          LIB_PATH=$(find /root/Arduino/libraries ~/Arduino/libraries -maxdepth 1 -name "TFT_eSPI*" -type d 2>/dev/null | head -1)
-          echo "TFT_eSPI found at: $LIB_PATH"
-          cat > "$LIB_PATH/User_Setup.h" << 'SETUP'
-#define ILI9341_DRIVER
-#define TFT_WIDTH  240
-#define TFT_HEIGHT 320
-#define TFT_MISO 12
-#define TFT_MOSI 13
-#define TFT_SCLK 14
-#define TFT_CS   15
-#define TFT_DC    2
-#define TFT_RST  -1
-#define TFT_BL   21
-#define LOAD_GLCD
-#define LOAD_FONT2
-#define LOAD_FONT4
-#define LOAD_FONT6
-#define LOAD_FONT7
-#define LOAD_FONT8
-#define LOAD_GFXFF
-#define SMOOTH_FONT
-#define SPI_FREQUENCY       27000000
-#define SPI_READ_FREQUENCY  20000000
-SETUP
+          LIB_PATH=$(find ~/Arduino/libraries -maxdepth 1 -name "TFT_eSPI*" -type d | head -1)
+          echo "TFT_eSPI at: $LIB_PATH"
+          printf '%s\n' \
+            '#define ILI9341_DRIVER' \
+            '#define TFT_WIDTH  240' \
+            '#define TFT_HEIGHT 320' \
+            '#define TFT_MISO 12' \
+            '#define TFT_MOSI 13' \
+            '#define TFT_SCLK 14' \
+            '#define TFT_CS   15' \
+            '#define TFT_DC    2' \
+            '#define TFT_RST  -1' \
+            '#define TFT_BL   21' \
+            '#define LOAD_GLCD' \
+            '#define LOAD_FONT2' \
+            '#define LOAD_FONT4' \
+            '#define LOAD_FONT6' \
+            '#define LOAD_FONT7' \
+            '#define LOAD_FONT8' \
+            '#define LOAD_GFXFF' \
+            '#define SMOOTH_FONT' \
+            '#define SPI_FREQUENCY       27000000' \
+            '#define SPI_READ_FREQUENCY  20000000' \
+            > "$LIB_PATH/User_Setup.h"
 
       - name: Compile sketch
         run: |
