@@ -1,39 +1,3 @@
-/*******************************************************************
-  A simple radio player for the ESP32 Cheap Yellow Display.
-  This example only works with ESP32 Board package v2.0.17 (not 3.x.x!)
-*******************************************************************/
-
-#include <Arduino.h>
-
-#if ESP_IDF_VERSION_MAJOR == 5
-#warning This example only works with ESP32 Board package v2.0.17 (not 3.x.x!)
-void setup() {}
-void loop() {}
-
-#else
-
-#include <WiFi.h>
-#include <TFT_eSPI.h>
-#include "Audio.h"
-
-const char* ssid     = "Freebox-AFD2EF";
-const char* password = "accusavero7-corporatur&-torris-odiosa7";
-
-TFT_eSPI tft = TFT_eSPI();
-Audio audio(true, I2S_DAC_CHANNEL_LEFT_EN);
-
-void setup() {
-  Serial.begin(115200);
-
-  tft.init();
-  tft.setRotation(1);
-  tft.setTextWrap(true, true);
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("Title", 0, 10, 1);
-
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to ");
   Serial.println(ssid);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
