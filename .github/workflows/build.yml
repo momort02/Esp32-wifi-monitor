@@ -28,15 +28,16 @@ jobs:
       - name: Install TFT_eSPI library
         run: arduino-cli lib install "TFT_eSPI"
 
-      - name: Install ESP32-audioI2S (pinned before C++20)
+      - name: Install ESP32-audioI2S v2.0.0 (compatible IDF4 + DAC interne)
         run: |
           git clone https://github.com/schreibfaul1/ESP32-audioI2S.git ~/Arduino/libraries/ESP32-audioI2S
           cd ~/Arduino/libraries/ESP32-audioI2S
-          git checkout a9e81f3
+          git checkout v2.0.0
 
       - name: Patch C++ standard to gnu++17
         run: |
           PLATFORM_TXT=$(find ~/.arduino15/packages/esp32 -name "platform.txt" | head -1)
+          echo "Patching: $PLATFORM_TXT"
           sed -i 's/-std=gnu++11/-std=gnu++17/g' "$PLATFORM_TXT"
 
       - name: Write CYD User_Setup.h into TFT_eSPI
