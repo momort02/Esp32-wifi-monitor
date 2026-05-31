@@ -36,10 +36,7 @@ jobs:
 
       - name: Write CYD User_Setup.h into TFT_eSPI
         run: |
-          LIB_PATH=$(arduino-cli lib list | grep TFT_eSPI | awk '{print $NF}')
-          if [ -z "$LIB_PATH" ]; then
-            LIB_PATH=$(find ~/Arduino/libraries -maxdepth 1 -name "TFT_eSPI*" -type d | head -1)
-          fi
+          LIB_PATH=$(find /root/Arduino/libraries ~/Arduino/libraries -maxdepth 1 -name "TFT_eSPI*" -type d 2>/dev/null | head -1)
           echo "TFT_eSPI found at: $LIB_PATH"
 
           cat > "$LIB_PATH/User_Setup.h" << 'SETUP'
@@ -67,6 +64,9 @@ jobs:
           #define SPI_FREQUENCY       27000000
           #define SPI_READ_FREQUENCY  20000000
           SETUP
+
+          echo "Written to: $LIB_PATH/User_Setup.h"
+          cat "$LIB_PATH/User_Setup.h"
 
       - name: Compile sketch
         run: |
