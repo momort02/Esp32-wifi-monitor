@@ -1,67 +1,52 @@
-name: Compile ESP32 CYD
+name: Compile ESP32 CYD HelloRadio
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build:
+  compile:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Arduino CLI
         uses: arduino/setup-arduino-cli@v2
 
-      - name: Install ESP32 core
+      - name: Install ESP32 board package v2.0.17
         run: |
           arduino-cli config init
-          arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli config add board_manager.additional_urls \
+            https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
           arduino-cli core update-index
-          arduino-cli core install esp32:esp32
+          arduino-cli core install esp32:esp32@2.0.17
 
-      - name: Install libraries
+      - name: Install TFT_eSPI library
+        run: arduino-cli lib install "TFT_eSPI"
+
+      - name: Install ESP32-audioI2S library (manual)
         run: |
-          arduino-cli lib install "TFT_eSPI"
-          arduino-cli lib install "XPT2046_Touchscreen"
-          arduino-cli lib install "ArduinoJson"
-          
-          # Autoriser l'installation ZIP
-          arduino-cli config set library.enable_unsafe_install true
-          curl -L https://github.com/T-vK/ESP32-BLE-Keyboard/archive/refs/heads/master.zip -o /tmp/blekey.zip
-          arduino-cli lib install --zip-path /tmp/blekey.zip
+          git clone https://github.com/schreibfaul1/ESP32-audioI2S.git \
+            ~/Arduino/libraries/ESP32-audioI2S
 
-          # --- HACK DE COMPATIBILITÉ CORE ESP32 3.0 (V2) ---
-          LIB_DIR="$HOME/Arduino/libraries/ESP32_BLE_Keyboard"
-          
-          # 1. Remplacer std::string par String
-          sed -i 's/std::string/String/g' "$LIB_DIR/BleKeyboard.h"
-          sed -i 's/std::string/String/g' "$LIB_DIR/BleKeyboard.cpp"
-          
-          # 2. Remplacer substr par substring (spécifique à l'objet String Arduino)
-          sed -i 's/\.substr(/.substring(/g' "$LIB_DIR/BleKeyboard.cpp"
-          
-          # 3. Supprimer les appels .c_str() devenus inutiles ou problématiques
-          sed -i 's/deviceName.c_str()/deviceName/g' "$LIB_DIR/BleKeyboard.cpp"
-          sed -i 's/deviceManufacturer.c_str()/deviceManufacturer/g' "$LIB_DIR/BleKeyboard.cpp"
-          
-          # 4. Nettoyer les conversions String(String(...)) créées par les versions précédentes
-          sed -i 's/String(deviceName)/deviceName/g' "$LIB_DIR/BleKeyboard.cpp"
-          sed -i 's/String(deviceManufacturer)/deviceManufacturer/g' "$LIB_DIR/BleKeyboard.cpp"
-
-
-
-      - name: Configure TFT_eSPI for CYD
+      - name: Write CYD User_Setup.h into TFT_eSPI
         run: |
-          SETUP_FILE=$(find $HOME/Arduino/libraries/TFT_eSPI -name "User_Setup.h")
-          cat <<EOF > "$SETUP_FILE"
-          #define USER_SETUP_LOADED
-          #define ILI9341_2_DRIVER
-          #define TFT_RGB_ORDER TFT_BGR
-          #define TFT_INVERSION_OFF
+          LIB_PATH=$(arduino-cli lib list | grep TFT_eSPI | awk '{print $NF}')
+          if [ -z "$LIB_PATH" ]; then
+            LIB_PATH=$(find ~/Arduino/libraries -maxdepth 1 -name "TFT_eSPI*" -type d | head -1)
+          fi
+          echo "TFT_eSPI found at: $LIB_PATH"
+
+          cat > "$LIB_PATH/User_Setup.h" << 'SETUP'
+          #define ILI9341_DRIVER
+          #define TFT_WIDTH  240
+          #define TFT_HEIGHT 320
+
           #define TFT_MISO 12
           #define TFT_MOSI 13
           #define TFT_SCLK 14
@@ -69,36 +54,31 @@ jobs:
           #define TFT_DC    2
           #define TFT_RST  -1
           #define TFT_BL   21
-          #define TOUCH_CS 33
+
           #define LOAD_GLCD
           #define LOAD_FONT2
+          #define LOAD_FONT4
+          #define LOAD_FONT6
+          #define LOAD_FONT7
+          #define LOAD_FONT8
+          #define LOAD_GFXFF
           #define SMOOTH_FONT
-          #define SPI_FREQUENCY        40000000
-          #define SPI_TOUCH_FREQUENCY   2500000
-          EOF
 
-      - name: Prepare and Compile
+          #define SPI_FREQUENCY       27000000
+          #define SPI_READ_FREQUENCY  20000000
+          SETUP
+
+      - name: Compile sketch
         run: |
-          # 1. Trouver le fichier .ino
-          FULL_PATH=$(find . -name "*.ino" -print -quit)
-          SKETCH_NAME=$(basename "$FULL_PATH" .ino)
-          echo "Compiling sketch: $SKETCH_NAME"
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32 \
+            --libraries ~/Arduino/libraries \
+            "Examples/Basics/7-HelloRadio/7-HelloRadio.ino" \
+            --output-dir build/
 
-          # 2. Créer un dossier temporaire propre portant le nom du sketch
-          # Cela évite l'erreur "main file missing from sketch"
-          mkdir -p "build/$SKETCH_NAME"
-          cp "$FULL_PATH" "build/$SKETCH_NAME/"
-          
-          # Copier aussi les éventuels fichiers .h ou .cpp s'ils existent
-          cp $(dirname "$FULL_PATH")/*.h "build/$SKETCH_NAME/" 2>/dev/null || true
-          cp $(dirname "$FULL_PATH")/*.cpp "build/$SKETCH_NAME/" 2>/dev/null || true
-
-          # 3. Compiler depuis ce nouveau dossier
-          arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./output "build/$SKETCH_NAME"
-
-
-      - name: Upload BIN
+      - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-esp32-cyd
-          path: output/*.bin
+          name: HelloRadio-firmware
+          path: build/
+          retention-days: 30
